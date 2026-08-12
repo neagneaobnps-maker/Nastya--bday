@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>З Днем народження, Настю!</title>
+<style>
+  :root{
+    --bg-night: #14172a;
+    --bg-night2: #232a4a;
+    --grass: #6ABE30;
+    --grass-dark: #4C8A22;
+    --dirt: #8B5A2B;
+    --dirt-dark: #5E3B1C;
+    --stone: #8B8B8B;
+    --stone-dark: #5f5f5f;
+    --diamond: #4CE8DA;
+    --gold: #F5C242;
+    --cream: #F4EFDD;
+    --tnt: #E5533D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; background:var(--bg-night); color:var(--cream); overflow-x:hidden;}
+  body{
+    min-height:100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pixel{
+    font-family: "Courier New", Courier, monospace;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    text-shadow: 2px 2px 0 rgba(0,0,0,.45);
+  }
+  .screen{
+    display:none;
+    min-height:100vh;
+    width:100%;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: calc(env(safe-area-inset-top) + 28px) calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 40px) calc(env(safe-area-inset-left) + 18px);
+    position:relative;
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.08), transparent 40%),
+      radial-gradient(ellipse at 80% 10%, rgba(255,255,255,0.05), transparent 35%),
+      linear-gradient(180deg, var(--bg-night) 0%, var(--bg-night2) 100%);
+  }
+  .screen.active{display:flex;}
+
+  /* pixel stars */
+  .star{position:absolute; width:3px; height:3px; background:#fff; opacity:.7; image-rendering:pixelated;}
+
+  /* terrain strip */
+  .terrain{
+    position:absolute; left:0; right:0; bottom:0; height:34px;
+    background:
+      repeating-linear-gradient(90deg, var(--grass) 0 18px, var(--grass-dark) 18px 20px) top/100% 12px no-repeat,
+      repeating-linear-gradient(90deg, var(--dirt) 0 18px, var(--dirt-dark) 18px 20px) bottom/100% 22px no-repeat;
+    box-shadow: 0 -2px 0 rgba(0,0,0,.3) inset;
+  }
+
+  .card{
+    max-width:420px; width:100%;
+    text-align:center;
+    z-index:2;
+  }
+
+  h1.pixel{
+    font-size: clamp(18px, 6vw, 26px);
+    color: var(--gold);
+    margin: 0 0 18px;
+    line-height:1.5;
+  }
+  p.msg{
+    font-size:16px;
+    line-height:1.6;
+    color: var(--cream);
+    margin: 0 0 26px;
+    opacity:.95;
+  }
+  .emoji-row{
+    font-size:34px;
+    margin-bottom:18px;
+    letter-spacing:6px;
+  }
+
+  .mc-btn{
+    display:inline-block;
+    font-family:"Courier New", monospace;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    font-size:16px;
+    color:#fff;
+    background: var(--grass);
+    border: none;
+    padding:14px 28px;
+    cursor:pointer;
+    border-top: 4px solid #9be36a;
+    border-left: 4px solid #9be36a;
+    border-right: 4px solid var(--grass-dark);
+    border-bottom: 4px solid var(--grass-dark);
+    text-shadow: 1px 1px 0 rgba(0,0,0,.4);
+    box-shadow: 0 4px 0 rgba(0,0,0,.35);
+    transition: transform .05s ease;
+  }
+  .mc-btn:active{
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 rgba(0,0,0,.35);
+  }
+  .mc-btn.gold{
+    background: var(--gold);
+    border-top-color:#ffe089;
+    border-left-color:#ffe089;
+    border-right-color:#b8862a;
+    border-bottom-color:#b8862a;
+  }
+
+  .skip-link{
+    display:block;
+    margin-top:16px;
+    font-size:13px;
+    color: rgba(244,239,221,.55);
+    text-decoration:underline;
+    background:none; border:none; cursor:pointer;
+    font-family:inherit;
+  }
+
+  /* game screen */
+  #screen-game{ padding-top: calc(env(safe-area-inset-top) + 14px); }
+  .hud{
+    width:100%; max-width:420px;
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:10px;
+    font-size:15px;
+    z-index:2;
+  }
+  .hud span.gold{color:var(--gold);}
+  .hud span.tnt{color:var(--tnt);}
+  .goal{
+    font-size:13px;
+    color: rgba(244,239,221,.75);
+    margin-bottom:10px;
+    text-align:center;
+    z-index:2;
+  }
+  #gameCanvas{
+    touch-action:none;
+    border: 4px solid var(--stone-dark);
+    background: linear-gradient(180deg,#1c2140,#2a3060 60%, #3a2a1f 100%);
+    max-width:100%;
+    border-radius:2px;
+    z-index:2;
+  }
+  .lives-heart{color:var(--tnt); font-size:16px;}
+
+  /* win screen */
+  #confettiWrap{
+    position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:1;
+  }
+  .confetti{
+    position:absolute; top:-20px; width:10px; height:10px;
+    opacity:.95;
+    animation: fall linear forwards;
+  }
+  @keyframes fall{
+    to{ transform: translateY(115vh) rotate(360deg); }
+  }
+  .replay-hint{
+    font-size:12px; color:rgba(244,239,221,.6); margin-top:14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- INTRO SCREEN -->
+  <section class="screen active" id="screen-intro">
+    <div class="terrain"></div>
+    <div class="card">
+      <div class="emoji-row">⛏️💎🟩</div>
+      <h1 class="pixel">Вибач, що не привітав вчасно...</h1>
+      <p class="msg">Знаю, знаю — днюха вже пройшла, а вітання десь загубилось між парами і крафтами. Тому ось тобі невеличка гра. Назбирай алмази — і отримаєш повноцінне вітання, як годиться!</p>
+      <button class="mc-btn" id="startBtn">▶ Почати гру</button>
+      <button class="skip-link" id="skipBtn">Пропустити гру, покажи одразу вітання →</button>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section class="screen" id="screen-game">
+    <div class="terrain"></div>
+    <div class="hud">
+      <span>💎 <span class="gold" id="scoreVal">0</span> / <span id="targetVal">15</span></span>
+      <span id="livesVal">❤️❤️❤️</span>
+    </div>
+    <div class="goal">Тягни / веди пальцем, щоб рухати кошик. Лови 💎, уникай 🧨</div>
+    <canvas id="gameCanvas"></canvas>
+  </section>
+
+  <!-- WIN SCREEN -->
+  <section class="screen" id="screen-win">
+    <div id="confettiWrap"></div>
+    <div class="terrain"></div>
+    <div class="card">
+      <div class="emoji-row">🎉💎🎂</div>
+      <h1 class="pixel">З Днем народження, Настуню!</h1>
+      <p class="msg">
+        Нехай це літо буде таким же приємним, як зібрати повний кошик алмазів 💎, а всі плани складаються без жодного тротилу на шляху.
+        Хай настрій буде на максимальному рівні, а натхнення — навіть на нічний крафт у Майнкрафті.
+        Дякую, що ти є — і ще раз вибач, що вітання прийшло з запізненням, зате з мінігрою 🙈💚
+      </p>
+      <button class="mc-btn gold" id="replayBtn">🔁 Зіграти ще раз</button>
+      <div class="replay-hint">якщо музика не почалась — просто тапни ще раз по екрану</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const screens = {
+    intro: document.getElementById('screen-intro'),
+    game: document.getElementById('screen-game'),
+    win: document.getElementById('screen-win'),
+  };
+  function showScreen(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  // ---------- stars decoration ----------
+  function scatterStars(container, count){
+    for(let i=0;i<count;i++){
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.left = Math.random()*100 + '%';
+      s.style.top = Math.random()*70 + '%';
+      s.style.opacity = (0.3 + Math.random()*0.6).toFixed(2);
+      container.appendChild(s);
+    }
+  }
+  scatterStars(screens.intro, 25);
+  scatterStars(screens.game, 15);
+  scatterStars(screens.win, 20);
+
+  // ---------- audio (procedural, no external files) ----------
+  let audioCtx = null;
+  let masterGain = null;
+  const MASTER_VOLUME = 1.15; // ~115% output level
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = MASTER_VOLUME;
+      // soft-limiter so the boosted volume doesn't turn into harsh digital clipping
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -8;
+      compressor.knee.value = 12;
+      compressor.ratio.value = 6;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.15;
+      masterGain.connect(compressor);
+      compressor.connect(audioCtx.destination);
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  function blip(freq, duration, type, gain){
+    try{
+      const ctx = ensureAudio();
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type || 'square';
+      osc.frequency.value = freq;
+      g.gain.value = gain != null ? gain : 0.06;
+      osc.connect(g); g.connect(masterGain);
+      const now = ctx.currentTime;
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.start(now);
+      osc.stop(now + duration);
+    }catch(e){}
+  }
+  function catchBlip(){ blip(880, 0.12, 'square', 0.05); }
+  function tntBlip(){ blip(140, 0.25, 'sawtooth', 0.07); }
+
+  // "Happy Birthday to You" melody (public domain) — key of C
+  const HAPPY_BIRTHDAY = [
+    [261.63, 0.28], [261.63, 0.22], [293.66, 0.5], [261.63, 0.5], [349.23, 0.5], [329.63, 1.0],
+    [261.63, 0.28], [261.63, 0.22], [293.66, 0.5], [261.63, 0.5], [392.00, 0.5], [349.23, 1.0],
+    [261.63, 0.28], [261.63, 0.22], [523.25, 0.5], [440.00, 0.5], [349.23, 0.5], [329.63, 0.5], [293.66, 1.0],
+    [466.16, 0.28], [466.16, 0.22], [440.00, 0.5], [349.23, 0.5], [392.00, 0.5], [349.23, 1.0],
+  ];
+  function playVictoryTune(){
+    let t = 0;
+    HAPPY_BIRTHDAY.forEach(([freq, dur]) => {
+      setTimeout(() => blip(freq, dur*1.05, 'triangle', 0.11), t*1000);
+      t += dur;
+    });
+  }
+
+  // ---------- intro buttons ----------
+  document.getElementById('startBtn').addEventListener('click', () => {
+    ensureAudio();
+    showScreen('game');
+    startGame();
+  });
+  document.getElementById('skipBtn').addEventListener('click', () => {
+    ensureAudio();
+    showScreen('win');
+    launchConfetti();
+    playVictoryTune();
+  });
+  document.getElementById('replayBtn').addEventListener('click', () => {
+    ensureAudio();
+    showScreen('game');
+    startGame();
+  });
+
+  // ---------- game ----------
+  const canvas = document.getElementById('gameCanvas');
+  const ctx2d = canvas.getContext('2d');
+  const scoreEl = document.getElementById('scoreVal');
+  const targetEl = document.getElementById('targetVal');
+  const livesEl = document.getElementById('livesVal');
+
+  const TARGET = 15;
+  targetEl.textContent = TARGET;
+  let CW = 380, CH = 480;
+
+  function resizeCanvas(){
+    const maxW = Math.min(420, window.innerWidth - 36);
+    CW = Math.max(280, maxW);
+    CH = Math.round(CW * 1.25);
+    canvas.width = CW * window.devicePixelRatio;
+    canvas.height = CH * window.devicePixelRatio;
+    canvas.style.width = CW + 'px';
+    canvas.style.height = CH + 'px';
+    ctx2d.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  let basketX = CW/2;
+  let basketTargetX = CW/2;
+  const basketW = 64, basketH = 30;
+
+  let items = [];
+  let score = 0;
+  let lives = 3;
+  let running = false;
+  let spawnTimer = null;
+  let rafId = null;
+
+  function updateHUD(){
+    scoreEl.textContent = score;
+    livesEl.textContent = '❤️'.repeat(Math.max(lives,0)) + '🖤'.repeat(Math.max(3-lives,0));
+  }
+
+  function pointerToX(clientX){
+    const rect = canvas.getBoundingClientRect();
+    return clientX - rect.left;
+  }
+  function onPointerMove(x){
+    basketTargetX = Math.min(CW - basketW/2, Math.max(basketW/2, x));
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    ensureAudio();
+    onPointerMove(pointerToX(e.clientX));
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if(e.pressure > 0 || e.pointerType === 'touch'){
+      onPointerMove(pointerToX(e.clientX));
+    }
+  });
+
+  function spawnItem(){
+    const isTnt = Math.random() < 0.22;
+    items.push({
+      x: 20 + Math.random() * (CW - 40),
+      y: -20,
+      vy: 90 + Math.random()*70 + score*1.2,
+      emoji: isTnt ? '🧨' : '💎',
+      type: isTnt ? 'tnt' : 'diamond',
+      size: 26,
+      alive: true
+    });
+  }
+
+  function startGame(){
+    score = 0; lives = 3; items = [];
+    updateHUD();
+    running = true;
+    if(spawnTimer) clearInterval(spawnTimer);
+    spawnTimer = setInterval(() => { if(running) spawnItem(); }, 750);
+    if(rafId) cancelAnimationFrame(rafId);
+    let last = performance.now();
+    function loop(now){
+      const dt = Math.min(0.05, (now - last)/1000);
+      last = now;
+      step(dt);
+      draw();
+      if(running){
+        rafId = requestAnimationFrame(loop);
+      }
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function step(dt){
+    basketX += (basketTargetX - basketX) * Math.min(1, dt*12);
+    const basketY = CH - 46;
+    items.forEach(item => {
+      if(!item.alive) return;
+      item.y += item.vy * dt;
+      if(item.y + item.size/2 >= basketY &&
+         item.y - item.size/2 <= basketY + basketH &&
+         item.x > basketX - basketW/2 - 6 &&
+         item.x < basketX + basketW/2 + 6){
+        item.alive = false;
+        if(item.type === 'diamond'){
+          score++;
+          catchBlip();
+          updateHUD();
+          if(score >= TARGET){
+            winGame();
+          }
+        } else {
+          lives--;
+          tntBlip();
+          updateHUD();
+          if(lives <= 0){
+            score = 0; lives = 3;
+            updateHUD();
+          }
+        }
+      } else if(item.y > CH + 30){
+        item.alive = false;
+      }
+    });
+    items = items.filter(i => i.alive);
+  }
+
+  function drawBlockText(text, x, y, size, color){
+    ctx2d.font = `700 ${size}px "Courier New", monospace`;
+    ctx2d.fillStyle = color;
+    ctx2d.textAlign = 'center';
+    ctx2d.fillText(text, x, y);
+  }
+
+  function draw(){
+    ctx2d.clearRect(0,0,CW,CH);
+    // ground strip
+    const groundY = CH - 16;
+    ctx2d.fillStyle = '#4C8A22';
+    ctx2d.fillRect(0, groundY, CW, 6);
+    ctx2d.fillStyle = '#5E3B1C';
+    ctx2d.fillRect(0, groundY+6, CW, 10);
+
+    // items
+    items.forEach(item => {
+      ctx2d.font = `${item.size}px sans-serif`;
+      ctx2d.textAlign = 'center';
+      ctx2d.textBaseline = 'middle';
+      ctx2d.fillText(item.emoji, item.x, item.y);
+    });
+
+    // basket
+    const basketY = CH - 46;
+    ctx2d.font = '38px sans-serif';
+    ctx2d.textAlign = 'center';
+    ctx2d.textBaseline = 'middle';
+    ctx2d.fillText('🧺', basketX, basketY + 14);
+  }
+
+  function winGame(){
+    running = false;
+    clearInterval(spawnTimer);
+    cancelAnimationFrame(rafId);
+    setTimeout(() => {
+      showScreen('win');
+      launchConfetti();
+      playVictoryTune();
+    }, 250);
+  }
+
+  // ---------- confetti ----------
+  function launchConfetti(){
+    const wrap = document.getElementById('confettiWrap');
+    wrap.innerHTML = '';
+    const colors = ['#4CE8DA','#F5C242','#6ABE30','#F4EFDD','#E5533D'];
+    const count = 60;
+    for(let i=0;i<count;i++){
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random()*100 + '%';
+      c.style.background = colors[Math.floor(Math.random()*colors.length)];
+      c.style.animationDuration = (2.5 + Math.random()*2.5) + 's';
+      c.style.animationDelay = (Math.random()*1.2) + 's';
+      c.style.width = c.style.height = (6 + Math.random()*8) + 'px';
+      wrap.appendChild(c);
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
